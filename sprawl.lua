@@ -56,7 +56,6 @@ local function array(...)
     local shape = {...}
 
     if #shape == 0 then error("arrays must be at least 1-dimensional") end
-    if #shape == 1 then error("TODO -- 1D array is the trivial case; do nothing") end
 
     local size = 1
     for i = 1, #shape do

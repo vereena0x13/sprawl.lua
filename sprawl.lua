@@ -6,31 +6,45 @@ local setfenv           = setfenv
 local setmetatable      = setmetatable
 local loadstring        = loadstring
 local math_floor        = math.floor
+local string_sub        = string.sub
 local string_format     = string.format
 local table_concat      = table.concat
 
 
--- TODO: cache the generated indexer functions!
-local function generate_indexer(shape)
+local function shape_key(shape)
     local buf = {}
+    for _, v in ipairs(shape) do buf[#buf + 1] = tostring(v) end
+    return table.concat(buf, "x")
+end
 
+
+local indexer_cache = setmetatable({}, { __mode = "v" })
+local function indexer(shape)
+    local key = shape_key(shape)
+    if indexer_cache[key] then return indexer_cache[key] end
+
+    local buf = {}
     local function emit(fmt, ...) buf[#buf + 1] = string_format(fmt, ...) end
 
-    emit("local xs = {...}")
     -- TODO: generate bounds checks... (also, integer checks? ... eh.)
+    --       also, should we allow disabling bounds checks if the user
+    --       wants to? *shrugs* probably tbh.
+
+    emit("local xs = {...}")
     emit("return 1 +")
     local ndims = #shape
-    for i = 0, ndims - 1 do
-        local m = 1
-        for j = 1, ndims - i - 1 do m = m * shape[j] end
-        if i > 0 then emit("+") end
-        emit("xs[%d]*%d", ndims - i, m)
+    local m = 1
+    for i = ndims, 1, -1 do
+        if i < ndims then emit("+") end
+        emit("xs[%d]*%d", i, m)
+        m = m * shape[ndims - i + 1]
     end
 
     local code = table_concat(buf, " ")
-    --print(code)
     local fn = loadstring(code)
     setfenv(fn, {})
+
+    indexer_cache[key] = fn
     return fn
 end
 
@@ -50,11 +64,11 @@ local function array(...)
         size = size * d
     end
 
-    local index = generate_indexer(shape)
+    local index = indexer(shape)
     local ndims = #shape
     local data = {}
 
-    return setmetatable({
+    local arr = {
         index = index,
         shape = setmetatable({}, { __index = shape }),
         get = function(...)
@@ -71,12 +85,12 @@ local function array(...)
             end
             data[index(...)] = select(nargs, ...)
         end,
-    }, {
+    }
+    local arrstr = string_format("array(%s):%s", shape_key(shape), string_sub(tostring(arr), 10))
+    return setmetatable(arr, {
         __metatable = "< sprawl array >",
         __newindex = function() error("array is protected") end,
-        __tostring = function()
-            return "TODO"
-        end
+        __tostring = function() return arrstr end
     })
 end
 

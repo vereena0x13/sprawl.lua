@@ -26,13 +26,16 @@ local function indexer(shape)
     local buf = {}
     local function emit(fmt, ...) buf[#buf + 1] = string_format(fmt, ...) end
 
-    -- TODO: generate bounds checks... (also, integer checks? ... eh.)
-    --       also, should we allow disabling bounds checks if the user
-    --       wants to? *shrugs* probably tbh.
-
     emit("local xs = {...}")
-    emit("return 1 +")
+
     local ndims = #shape
+    for i = 1, ndims do
+        emit("if xs[%d] < 0 or xs[%d] >= %d then", i, i, shape[i])
+        emit("error(\"index %d out of bounds: \" .. xs[%d] .. \", expected 0 to %d\")", i, i, shape[i] - 1)
+        emit("end")
+    end
+
+    emit("return 1 +")
     local m = 1
     for i = ndims, 1, -1 do
         if i < ndims then emit("+") end
@@ -41,8 +44,8 @@ local function indexer(shape)
     end
 
     local code = table_concat(buf, " ")
-    local fn = loadstring(code)
-    setfenv(fn, {})
+    local fn = loadstring(code, "indexer(" .. key .. ")")
+    setfenv(fn, { error = error })
 
     indexer_cache[key] = fn
     return fn

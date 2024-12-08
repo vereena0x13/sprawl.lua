@@ -11,6 +11,7 @@ local string_format     = string.format
 local table_concat      = table.concat
 
 
+
 local function shape_key(shape)
     local buf = {}
     for _, v in ipairs(shape) do buf[#buf + 1] = tostring(v) end
@@ -28,19 +29,19 @@ local function indexer(shape)
 
     emit("local xs = {...}")
 
-    local ndims = #shape
-    for i = 1, ndims do
+    local dims = #shape
+    for i = 1, dims do
         emit("if xs[%d] < 0 or xs[%d] >= %d then", i, i, shape[i])
         emit("error(\"index %d out of bounds: \" .. xs[%d] .. \", expected 0 to %d\")", i, i, shape[i] - 1)
         emit("end")
     end
 
-    emit("return 1 +")
+    emit("return ")
     local m = 1
-    for i = ndims, 1, -1 do
-        if i < ndims then emit("+") end
+    for i = 1, dims do
+        if i > 1 then emit("+") end
         emit("xs[%d]*%d", i, m)
-        m = m * shape[ndims - i + 1]
+        m = m * shape[i]
     end
 
     local code = table_concat(buf, " ")
@@ -54,6 +55,7 @@ end
 
 local function array(...)
     local shape = {...}
+    if #shape == 1 and type(shape[1]) == "table" then shape = shape[1] end
 
     if #shape == 0 then error("arrays must be at least 1-dimensional") end
 
@@ -67,32 +69,39 @@ local function array(...)
     end
 
     local index = indexer(shape)
-    local ndims = #shape
+    local dims = #shape
     local data = {}
 
     local arr = {
         index = index,
-        shape = setmetatable({}, { __index = shape }),
+        shape = (function()
+            local xs = {}
+            for i = 1, #shape do xs[#xs + 1] = shape[i] end
+            return xs
+        end)(),
+        dims = dims,
+        size = size,
         get = function(...)
             local nargs = select("#", ...)
-            if nargs ~= ndims then
-                error(string_format("%d-dimensional array `get` got %d arguments", ndims, nargs))
+            if nargs ~= dims then
+                error(string_format("%d-dimensional array `get` got %d arguments", dims, nargs))
             end
-            return data[index(...)]
+            return data[1 + index(...)]
         end,
         set = function(...)
             local nargs = select("#", ...)
-            if nargs ~= ndims + 1 then
-                error(string_format("%d-dimensional array `set` got %d arguments", ndims, nargs))
+            if nargs ~= dims + 1 then
+                error(string_format("%d-dimensional array `set` got %d arguments", dims, nargs))
             end
-            data[index(...)] = select(nargs, ...)
+            data[1 + index(...)] = select(nargs, ...)
         end,
     }
     local arrstr = string_format("array(%s):%s", shape_key(shape), string_sub(tostring(arr), 10))
     return setmetatable(arr, {
         __metatable = "< sprawl array >",
         __newindex = function() error("array is protected") end,
-        __tostring = function() return arrstr end
+        __tostring = function() return arrstr end,
+        __casll = function(_, ...) return arr.get(...) end
     })
 end
 
@@ -130,4 +139,5 @@ return setmetatable({
     __metatable = "sprawl.lua",
     __newindex = function(_, _, _) error() end,
     __tostring = function() return "sprawl.lua" end,
+    __call = function(_, ...) return array(...) end
 })

@@ -125,4 +125,54 @@ describe("sprawl.lua array", function()
             end
         end)
     end)
+
+    describe("foreachi", function()
+        it("works", function()
+            local arr = array(2, 2, 2)
+
+            local i = 0
+            arr.foreachi(function(x, y, z, _)
+                arr.set(x, y, z, i)
+                i = i + 1
+            end)
+
+            assert.equal(0, arr.get(0, 0, 0))
+            assert.equal(1, arr.get(1, 0, 0))
+            assert.equal(2, arr.get(0, 1, 0))
+            assert.equal(3, arr.get(1, 1, 0))
+            assert.equal(4, arr.get(0, 0, 1))
+            assert.equal(5, arr.get(1, 0, 1))
+            assert.equal(6, arr.get(0, 1, 1))
+            assert.equal(7, arr.get(1, 1, 1))
+
+            i = 0
+            arr.foreachi(function(x, y, z, v)
+                assert.equal(arr.get(x, y, z), v)
+                i = i + 1
+            end)
+        end)
+    end)
+
+    describe("foreachi", function()
+        it("works", function()
+            local arr = array(2, 2)
+
+            local i = 1
+            arr.foreachi(function(x, y, _)
+                arr.set(x, y, i)
+                i = i + 1
+            end)
+
+            assert.equal(1, arr.get(0, 0))
+            assert.equal(2, arr.get(1, 0))
+            assert.equal(3, arr.get(0, 1))
+            assert.equal(4, arr.get(1, 1))
+
+            local xs = {}
+            arr.foreach(function(v) xs[v] = true end)
+
+            assert.equal(arr.size, #xs) 
+            for i = 1, arr.size do assert(xs[i]) end
+        end)
+    end)
 end)

@@ -63,8 +63,9 @@ local function array(...)
 
     if #shape == 0 then error("arrays must be at least 1-dimensional") end -- TODO: deduplicate
 
+    local dims = #shape
     local size = 1
-    for i = 1, #shape do
+    for i = 1, dims do
         local d = shape[i]
         if type(d) ~= "number" then error("expected integer, got " .. type(d)) end
         if d ~= math_floor(d) then error("expected integer, got " .. tostring(d)) end
@@ -72,30 +73,61 @@ local function array(...)
         size = size * d
     end
 
-    local index = indexer(shape)
-    local dims = #shape
     local data = {}
+    local index = indexer(shape)
 
     local arr = {
         index = index,
         shape = shape,
         dims = dims,
-        size = size,
-        get = function(...)
-            local nargs = select("#", ...)
-            if nargs ~= dims then
-                error(string_format("%d-dimensional array `get` got %d arguments", dims, nargs))
-            end
-            return data[1 + index(...)]
-        end,
-        set = function(...)
-            local nargs = select("#", ...)
-            if nargs ~= dims + 1 then
-                error(string_format("%d-dimensional array `set` got %d arguments", dims, nargs))
-            end
-            data[1 + index(...)] = select(nargs, ...)
-        end,
+        size = size
     }
+    
+    function arr.get(...)
+        local nargs = select("#", ...)
+        if nargs ~= dims then
+            error(string_format("%d-dimensional array `get` got %d arguments", dims, nargs))
+        end
+        return data[1 + index(...)]
+    end
+    
+    function arr.set(...)
+        local nargs = select("#", ...)
+        if nargs ~= dims + 1 then
+            error(string_format("%d-dimensional array `set` got %d arguments", dims, nargs))
+        end
+        data[1 + index(...)] = select(nargs, ...)
+    end
+    
+    function arr.foreachi(fn)
+        local is = {} 
+        for i = 1, dims do is[#is + 1] = 0 end
+
+        local run = true
+        while run do
+            is[dims + 1] = data[1 + index(unpack(is))]
+            fn(unpack(is))
+            is[dims + 1] = nil
+
+            for i = 1, dims do
+                local t = is[i] + 1
+                if t >= shape[i] then
+                    is[i] = 0
+                    if i == dims then run = false end
+                else
+                    is[i] = t
+                    break
+                end
+            end
+        end
+    end
+
+    function arr.foreach(fn)
+        arr.foreachi(function(...)
+            local nargs = select('#', ...)
+            fn(select(nargs, ...))
+        end)
+    end
 
     local arrstr = string_format("array(%s):%s", shape_key(shape), string_sub(tostring(arr), 10))
     local arr_get = arr.get

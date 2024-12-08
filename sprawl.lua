@@ -55,9 +55,13 @@ end
 
 local function array(...)
     local shape = {...}
-    if #shape == 1 and type(shape[1]) == "table" then shape = shape[1] end
 
     if #shape == 0 then error("arrays must be at least 1-dimensional") end
+    
+    if #shape == 1 and type(shape[1]) == "table" then shape = shape[1] end
+    setmetatable(shape, { __newindex = function() error("shape is protected") end })
+
+    if #shape == 0 then error("arrays must be at least 1-dimensional") end -- TODO: deduplicate
 
     local size = 1
     for i = 1, #shape do
@@ -74,11 +78,7 @@ local function array(...)
 
     local arr = {
         index = index,
-        shape = (function()
-            local xs = {}
-            for i = 1, #shape do xs[#xs + 1] = shape[i] end
-            return xs
-        end)(),
+        shape = shape,
         dims = dims,
         size = size,
         get = function(...)
@@ -96,12 +96,14 @@ local function array(...)
             data[1 + index(...)] = select(nargs, ...)
         end,
     }
+
     local arrstr = string_format("array(%s):%s", shape_key(shape), string_sub(tostring(arr), 10))
+    local arr_get = arr.get
     return setmetatable(arr, {
         __metatable = "< sprawl array >",
         __newindex = function() error("array is protected") end,
         __tostring = function() return arrstr end,
-        __call = function(_, ...) return arr.get(...) end
+        __call = function(_, ...) return arr_get(...) end
     })
 end
 
@@ -137,7 +139,7 @@ return setmetatable({
     ]],
 }, {
     __metatable = "sprawl.lua",
-    __newindex = function(_, _, _) error() end,
+    __newindex = function() error() end,
     __tostring = function() return "sprawl.lua" end,
     __call = function(_, ...) return array(...) end
 })

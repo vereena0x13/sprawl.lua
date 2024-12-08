@@ -10,6 +10,10 @@ describe("sprawl.lua array", function()
             assert.has_error(function()
                 array()
             end, "arrays must be at least 1-dimensional")
+            
+            assert.has_error(function()
+                array{}
+            end, "arrays must be at least 1-dimensional")
         end)
 
         it("errors on non-integer dimensions", function()
@@ -85,15 +89,10 @@ describe("sprawl.lua array", function()
                 local shape = {3, 5, 2}
                 local arr = array(shape)
 
-                local function mkindices()
-                    local xs = {}
-                    for i = 1, arr.dims do xs[#xs + 1] = 0 end
-                    return xs
-                end
-
                 local function check(i, v, e)
                     assert.has_error(function()
-                        local is = mkindices()
+                        local is = {}
+                        for i = 1, arr.dims do is[#is + 1] = 0 end
                         is[i] = v
                         arr.index(unpack(is))
                     end, e)

@@ -101,7 +101,7 @@ local function array(...)
         __metatable = "< sprawl array >",
         __newindex = function() error("array is protected") end,
         __tostring = function() return arrstr end,
-        __casll = function(_, ...) return arr.get(...) end
+        __call = function(_, ...) return arr.get(...) end
     })
 end
 

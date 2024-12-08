@@ -119,6 +119,7 @@ describe("sprawl.lua array", function()
                         assert.equal(nil, arr.get(x, y, z))
                         arr.set(x, y, z, i)
                         assert.equal(i, arr.get(x, y, z))
+                        assert.equal(i, arr(x, y, z))
                         i = i + 1
                     end
                 end

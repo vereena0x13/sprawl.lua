@@ -7,9 +7,11 @@ local setmetatable      = setmetatable
 local loadstring        = loadstring
 local math_floor        = math.floor
 local string_sub        = string.sub
-local string_format     = string.format
+local sprintf           = string.format
 local table_concat      = table.concat
 
+
+local function errorf(...) return error(sprintf(...)) end
 
 
 local function shape_key(shape)
@@ -25,7 +27,7 @@ local function indexer(shape)
     if indexer_cache[key] then return indexer_cache[key] end
 
     local buf = {}
-    local function emit(fmt, ...) buf[#buf + 1] = string_format(fmt, ...) end
+    local function emit(fmt, ...) buf[#buf + 1] = sprintf(fmt, ...) end
 
     emit("local xs = {...}")
 
@@ -69,7 +71,7 @@ local function array(...)
         local d = shape[i]
         if type(d) ~= "number" then error("expected integer, got " .. type(d)) end
         if d ~= math_floor(d) then error("expected integer, got " .. tostring(d)) end
-        if d <= 0 then error(string_format("array dimensions must be > 0, got %d for dimension #%d", d, i)) end
+        if d <= 0 then errorf("array dimensions must be > 0, got %d for dimension #%d", d, i) end
         size = size * d
     end
 
@@ -86,7 +88,7 @@ local function array(...)
     function arr.get(...)
         local nargs = select("#", ...)
         if nargs ~= dims then
-            error(string_format("%d-dimensional array `get` got %d arguments", dims, nargs))
+            errorf("%d-dimensional array `get` got %d arguments", dims, nargs)
         end
         return data[1 + index(...)]
     end
@@ -94,7 +96,7 @@ local function array(...)
     function arr.set(...)
         local nargs = select("#", ...)
         if nargs ~= dims + 1 then
-            error(string_format("%d-dimensional array `set` got %d arguments", dims, nargs))
+            errorf("%d-dimensional array `set` got %d arguments", dims, nargs)
         end
         data[1 + index(...)] = select(nargs, ...)
     end
@@ -123,13 +125,13 @@ local function array(...)
     end
 
     function arr.foreach(fn)
-        arr.foreachi(function(...)
+        return arr.foreachi(function(...)
             local nargs = select('#', ...)
             fn(select(nargs, ...))
         end)
     end
 
-    local arrstr = string_format("array(%s):%s", shape_key(shape), string_sub(tostring(arr), 10))
+    local arrstr = sprintf("array(%s):%s", shape_key(shape), string_sub(tostring(arr), 10))
     local arr_get = arr.get
     return setmetatable(arr, {
         __metatable = "< sprawl array >",

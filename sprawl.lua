@@ -47,11 +47,36 @@ local function indexer(shape)
     end
 
     local code = table_concat(buf, " ")
-    local fn = loadstring(code, "indexer(" .. key .. ")")
+    local fn, err = loadstring(code, "indexer(" .. key .. ")")
+    if err then error(err) end
     setfenv(fn, { error = error })
 
     indexer_cache[key] = fn
     return fn
+end
+
+
+local function generate_access(arr, index, data, name, fstr)
+    local buf = {}
+    local function emit(fmt, ...) buf[#buf + 1] = sprintf(fmt, ...) end
+
+    local n = arr.dims
+    if name == "set" then n = n + 1 end
+
+    emit("return function(index, data)")
+        emit("return function(...)")
+            emit("local nargs = select(\"#\", ...)")
+            emit("if nargs ~= %d then", n)
+                emit("error(\"%s::%s got \" .. nargs .. \" arguments\")", tostring(arr), name)
+            emit("end")
+        emit("%s", fstr)
+        emit("end")
+    emit("end")
+
+    local code = table.concat(buf, ' ')
+    local fn, err = loadstring(code, tostring(arr) .. "::" .. name .. "ter")
+    if err then error(err) end
+    return fn()(index, data)
 end
 
 
@@ -82,24 +107,8 @@ local function array(...)
         index = index,
         shape = shape,
         dims = dims,
-        size = size
+        size = size,
     }
-    
-    function arr.get(...)
-        local nargs = select("#", ...)
-        if nargs ~= dims then
-            errorf("%d-dimensional array `get` got %d arguments", dims, nargs)
-        end
-        return data[1 + index(...)]
-    end
-    
-    function arr.set(...)
-        local nargs = select("#", ...)
-        if nargs ~= dims + 1 then
-            errorf("%d-dimensional array `set` got %d arguments", dims, nargs)
-        end
-        data[1 + index(...)] = select(nargs, ...)
-    end
     
     function arr.foreachi(fn)
         local is = {} 
@@ -132,13 +141,21 @@ local function array(...)
     end
 
     local arrstr = sprintf("array(%s):%s", shape_key(shape), string_sub(tostring(arr), 10))
-    local arr_get = arr.get
-    return setmetatable(arr, {
+    local mt = {
         __metatable = "< sprawl array >",
-        __newindex = function() error("array is protected") end,
         __tostring = function() return arrstr end,
-        __call = function(_, ...) return arr_get(...) end
-    })
+    }
+    setmetatable(arr, mt)
+
+    arr.get = generate_access(arr, index, data, "get", "return data[1 + index(...)]")
+    arr.set = generate_access(arr, index, data, "set", "data[1 + index(...)] = select(nargs, ...)")
+
+    function mt.__newindex() error("array is protected") end
+    
+    local arr_get = arr.get
+    function mt.__call(_, ...) return arr_get(...) end
+
+    return arr
 end
 
 

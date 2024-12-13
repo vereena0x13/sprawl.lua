@@ -1,4 +1,27 @@
-local assert = require "luassert"
+local assert            = require "luassert"
+
+local pairs             = pairs
+local table_getn        = table.getn
+
+
+local function copy_into(dst, src)
+    for k, v in pairs(src) do dst[k] = v end
+end
+
+
+local function copy(...)
+    local r = {}
+    local xs = {...}
+    for i = 1, table_getn(xs) do
+        local x = xs[i]
+        if x ~= nil then
+            copy_into(r, x)
+        end
+    end
+    return r
+end
+
+
 describe("sprawl.lua array", function()
     local array
 
@@ -122,6 +145,38 @@ describe("sprawl.lua array", function()
                         i = i + 1
                     end
                 end
+            end
+        end)
+    end)
+
+    describe("iter", function()
+        it("works", function()
+            local shape = {3, 4, 2}
+            local arr = array(shape)
+            local Q = -41246
+            
+            local q = Q
+            for it in arr.iter_raw() do
+                local i = copy(it)
+                i[#i + 1] = q
+                arr.set(unpack(i))
+                q = q * 2
+            end
+
+            q = Q
+            for z = 0, shape[3]-1 do
+                for y = 0, shape[2]-1 do
+                    for x = 0, shape[1]-1 do
+                        assert.equal(q, arr(x, y, z))
+                        q = q * 2
+                    end
+                end
+            end
+            
+            q = Q
+            for i, j, k, v in arr.iter() do
+                assert.equal(q, v)
+                q = q * 2
             end
         end)
     end)

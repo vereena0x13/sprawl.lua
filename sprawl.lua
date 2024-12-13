@@ -9,6 +9,25 @@ local math_floor        = math.floor
 local string_sub        = string.sub
 local sprintf           = string.format
 local table_concat      = table.concat
+local table_getn        = table.getn
+
+
+local function copy_into(dst, src)
+    for k, v in pairs(src) do dst[k] = v end
+end
+
+
+local function copy(...)
+    local r = {}
+    local xs = {...}
+    for i = 1, table_getn(xs) do
+        local x = xs[i]
+        if x ~= nil then
+            copy_into(r, x)
+        end
+    end
+    return r
+end
 
 
 local function errorf(...) return error(sprintf(...)) end
@@ -109,16 +128,16 @@ local function array(...)
         dims = dims,
         size = size,
     }
-    
-    function arr.foreachi(fn)
-        local is = {} 
+
+    function arr.iter_raw()
+        local is = {}
         for i = 1, dims do is[#is + 1] = 0 end
 
         local run = true
-        while run do
-            is[dims + 1] = data[1 + index(unpack(is))]
-            fn(unpack(is))
-            is[dims + 1] = nil
+        return function()
+            if not run then return end
+
+            local xs = copy(is)
 
             for i = 1, dims do
                 local t = is[i] + 1
@@ -130,14 +149,32 @@ local function array(...)
                     break
                 end
             end
+
+            xs[#xs + 1] = arr.get(unpack(xs))
+        
+            return xs
+        end
+    end
+
+    function arr.iter()
+        local it = arr.iter_raw()
+        return function()
+            local xs = it()
+            if not xs then return end
+            return unpack(xs)
+        end
+    end
+
+    function arr.foreachi(fn)
+        for it in arr.iter_raw() do
+            fn(unpack(it))
         end
     end
 
     function arr.foreach(fn)
-        return arr.foreachi(function(...)
-            local nargs = select('#', ...)
-            fn(select(nargs, ...))
-        end)
+        for it in arr.iter_raw() do
+            fn(it[#it])
+        end
     end
 
     local arrstr = sprintf("array(%s):%s", shape_key(shape), string_sub(tostring(arr), 10))

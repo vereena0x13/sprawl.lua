@@ -2,13 +2,36 @@ local type              = type
 local tostring          = tostring
 local error             = error
 local select            = select
-local setfenv           = setfenv
+local unpack            = unpack
 local setmetatable      = setmetatable
-local loadstring        = loadstring
 local math_floor        = math.floor
 local string_sub        = string.sub
 local sprintf           = string.format
 local table_concat      = table.concat
+
+
+if not unpack then unpack = table.unpack end
+
+
+local loadstr
+if type(setfenv) == "function" then
+    local loadstring = loadstring
+    local setfenv = setfenv
+    loadstr = function(code, name, env)
+        local fn, err = loadstring(code, name)
+        if err then error(err) end
+        if env then setfenv(fn, env) end
+        return fn
+    end
+else
+    local load = load
+    loadstr = function(code, name, env)
+        local fn, err
+        if env then fn, err = load(code, name, "t", env) else fn, err = load(code, name, "t") end
+        if err then error(err) end
+        return fn
+    end
+end
 
 
 local function copy_into(dst, src)
@@ -65,9 +88,7 @@ local function indexer(shape)
     end
 
     local code = table_concat(buf, " ")
-    local fn, err = loadstring(code, "indexer(" .. key .. ")")
-    if err then error(err) end
-    setfenv(fn, { error = error })
+    local fn = loadstr(code, "indexer(" .. key .. ")", { error = error })
 
     indexer_cache[key] = fn
     return fn
@@ -92,8 +113,7 @@ local function generate_access(arr, index, data, name, fstr)
     emit("end")
 
     local code = table.concat(buf, ' ')
-    local fn, err = loadstring(code, tostring(arr) .. "::" .. name .. "ter")
-    if err then error(err) end
+    local fn = loadstr(code, tostring(arr) .. "::" .. name .. "ter")
     return fn()(index, data)
 end
 

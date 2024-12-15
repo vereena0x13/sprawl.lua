@@ -1,5 +1,5 @@
 local assert            = require "luassert"
-local unpack            = unpack and unpack or table.unpack
+local unpack            = table.unpack or unpack
 
 
 local function copy_into(dst, src)

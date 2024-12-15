@@ -3,6 +3,8 @@ local tostring          = tostring
 local error             = error
 local select            = select
 local unpack            = unpack and unpack or table.unpack
+local pairs             = pairs
+local ipairs            = ipairs
 local setmetatable      = setmetatable
 local math_floor        = math.floor
 local string_sub        = string.sub
@@ -55,7 +57,7 @@ local function errorf(...) return error(sprintf(...)) end
 local function shape_key(shape)
     local buf = {}
     for _, v in ipairs(shape) do buf[#buf + 1] = tostring(v) end
-    return table.concat(buf, "x")
+    return table_concat(buf, "x")
 end
 
 
@@ -109,7 +111,7 @@ local function generate_access(arr, index, data, name, fstr)
         emit("end")
     emit("end")
 
-    local code = table.concat(buf, ' ')
+    local code = table_concat(buf, ' ')
     local fn = loadstr(code, tostring(arr) .. "::" .. name .. "ter")
     return fn()(index, data)
 end

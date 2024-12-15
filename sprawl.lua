@@ -123,7 +123,7 @@ local function array(...)
     if #shape == 0 then error("arrays must be at least 1-dimensional") end
     
     if #shape == 1 and type(shape[1]) == "table" then shape = shape[1] end
-    setmetatable(shape, { __newindex = function() error("shape is protected") end })
+    setmetatable(shape, { __newindex = function() error("access violation") end })
 
     if #shape == 0 then error("arrays must be at least 1-dimensional") end -- TODO: deduplicate
 
@@ -206,7 +206,7 @@ local function array(...)
     arr.get = generate_access(arr, index, data, "get", "return data[1 + index(...)]")
     arr.set = generate_access(arr, index, data, "set", "data[1 + index(...)] = select(nargs, ...)")
 
-    function mt.__newindex() error("array is protected") end
+    function mt.__newindex() error("access violation") end
     
     local arr_get = arr.get
     function mt.__call(_, ...) return arr_get(...) end
@@ -216,7 +216,7 @@ end
 
 
 return setmetatable({
-    array = array,
+    array        = array,
     _VERSION     = 'sprawl.lua v0.1.0',
     _DESCRIPTION = '',
     _URL         = 'https://github.com/vereena0x13/sprawl.lua',
@@ -246,7 +246,7 @@ return setmetatable({
     ]],
 }, {
     __metatable = "sprawl.lua",
-    __newindex = function() error() end,
-    __tostring = function() return "sprawl.lua" end,
-    __call = function(_, ...) return array(...) end
+    __newindex  = function() error("access violation") end,
+    __tostring  = function() return "sprawl.lua" end,
+    __call      = function(_, ...) return array(...) end
 })

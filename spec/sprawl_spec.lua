@@ -1,8 +1,5 @@
 local assert            = require "luassert"
 
-local pairs             = pairs
-local table_getn        = table.getn
-
 
 local function copy_into(dst, src)
     for k, v in pairs(src) do dst[k] = v end
@@ -12,7 +9,7 @@ end
 local function copy(...)
     local r = {}
     local xs = {...}
-    for i = 1, table_getn(xs) do
+    for i = 1, #xs do
         local x = xs[i]
         if x ~= nil then
             copy_into(r, x)
@@ -208,7 +205,7 @@ describe("sprawl.lua array", function()
         end)
     end)
 
-    describe("foreachi", function()
+    describe("foreach", function()
         it("works", function()
             local arr = array(2, 2)
 

@@ -9,7 +9,6 @@ local math_floor        = math.floor
 local string_sub        = string.sub
 local sprintf           = string.format
 local table_concat      = table.concat
-local table_getn        = table.getn
 
 
 local function copy_into(dst, src)
@@ -20,7 +19,7 @@ end
 local function copy(...)
     local r = {}
     local xs = {...}
-    for i = 1, table_getn(xs) do
+    for i = 1, #xs do
         local x = xs[i]
         if x ~= nil then
             copy_into(r, x)
@@ -177,6 +176,7 @@ local function array(...)
         end
     end
 
+    -- TODO: clean up the following code
     local arrstr = sprintf("array(%s):%s", shape_key(shape), string_sub(tostring(arr), 10))
     local mt = {
         __metatable = "< sprawl array >",

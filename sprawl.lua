@@ -2,15 +2,12 @@ local type              = type
 local tostring          = tostring
 local error             = error
 local select            = select
-local unpack            = unpack
+local unpack            = unpack and unpack or table.unpack
 local setmetatable      = setmetatable
 local math_floor        = math.floor
 local string_sub        = string.sub
 local sprintf           = string.format
 local table_concat      = table.concat
-
-
-if not unpack then unpack = table.unpack end
 
 
 local loadstr
